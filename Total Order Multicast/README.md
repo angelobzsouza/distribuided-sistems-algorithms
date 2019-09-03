@@ -7,16 +7,16 @@ This code simulate a total order multicast algorithm. Basically, one process sen
 2. Run the application in each one with the following commands
 
 ```
-python totalOrderMulticast.py 9000 1
+python totalOrderMulticast.py 9000 0
 ```
 ```
-python totalOrderMulticast.py 9001 2
+python totalOrderMulticast.py 9001 1
 ```
 ```
-python totalOrderMulticast.py 9002 3
+python totalOrderMulticast.py 9002 2
 ```
 ```
-python totalOrderMulticast.py 9003 4
+python totalOrderMulticast.py 9003 3
 ```
 
-3. When the message "Send message?" appears in any process, type enter and see the magic happens.
+3. Type a string in one of process and see the magic.
