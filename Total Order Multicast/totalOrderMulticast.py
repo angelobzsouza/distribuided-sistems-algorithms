@@ -9,10 +9,34 @@ import thread
 import socket
 import sys
 import signal
+import pickle
+
+class Package:
+	def __init__(self, id, type, time):
+		self.id = id
+		self.type = type
+		self.time = time
 
 class Process:
     def __init__(self, id):
-        self.id = id
+		self.id = id
+		self.time = 0
+
+    def sendPackage(self, type, data): 
+        packageId = str(self.time)+str(self.id)
+        package = Package(packageId, type,  self.time)
+
+		# Send package to the four open process
+        for i in range(0,4):
+                # Open socket
+				mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+				serverAddress = ('localhost', 9000 + i)
+				mySocket.connect(serverAddress)
+
+				# Send package
+				codeMessage = pickle.dumps(package)
+				mySocket.send(codeMessage)
+				mySocket.close()
 
 # Trhead to send packages
 def processThread():
