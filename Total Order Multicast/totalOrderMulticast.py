@@ -19,24 +19,30 @@ class Package:
 
 class Process:
     def __init__(self, id):
-		self.id = id
-		self.time = 0
+        self.id = id
+        self.time = 0
 
     def sendPackage(self, type, data): 
         packageId = str(self.time)+str(self.id)
         package = Package(packageId, type,  self.time)
 
 		# Send package to the four open process
-        for i in range(0,4):
+        for i in range(0, 4):
+            try:
                 # Open socket
-				mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-				serverAddress = ('localhost', 9000 + i)
-				mySocket.connect(serverAddress)
+                mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                serverAddress = ('localhost', 9000 + i)
+                mySocket.connect(serverAddress)
 
-				# Send package
-				codeMessage = pickle.dumps(package)
-				mySocket.send(codeMessage)
-				mySocket.close()
+                # Send package
+                codeMessage = pickle.dumps(package)
+                mySocket.send(codeMessage)
+                mySocket.close()
+            except Exception as e:
+                print 'Error sending package to process: ', i + 1,'Erro: ', e
+
+    def receivePackage(self, pacakge):
+        print 'teste'
 
 # Trhead to send packages
 def processThread():
@@ -72,8 +78,8 @@ def receiveThread():
 global process 
 process = Process(int(sys.argv[2]))
 def main():
-    thread.start_new_thread(processThread, ())
     thread.start_new_thread(receiveThread, ())
+    thread.start_new_thread(processThread, ())
     signal.pause()
 
 if __name__ == "__main__":
