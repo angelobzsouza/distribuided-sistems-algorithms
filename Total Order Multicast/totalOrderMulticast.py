@@ -10,6 +10,8 @@ import socket
 import sys
 import signal
 import pickle
+import time
+import random
 
 class Package:
     def __init__(self, id, type, time, data):
@@ -28,12 +30,17 @@ class Process:
         self.time = 0
         self.packageQueue = []
         self.ackQueue = []
+        self.appPackages = [] #Used just too see which packages was sent to app
 
     def sendPackageToApp(self):
-        if self.packageQueue[0].acks == 4:
-            del self.packageQueue[0]
+        if int(len(self.packageQueue)) > 0:
+            if self.packageQueue[0].acks == 4:
+                self.appPackages.append(self.packageQueue[0])
+                del self.packageQueue[0]
+                self.showAppQueue()
 
-    def sendPackage(self, type, data): 
+    def sendPackage(self, type, data):
+        self.time += 1 
         packageId = str(self.time)+str(self.id)
         package = Package(packageId, type,  self.time, data)
 
@@ -50,17 +57,22 @@ class Process:
                 mySocket.send(codeMessage)
                 mySocket.close()
             except Exception as e:
-                print 'Error sending package to process: ', i + 1,'Erro: ', e
+                print 'Error sending package to process: ', i,'Erro: ', e
+            if type == 'data':
+                time.sleep(random.randint(0, 5)) #Used to make acks arrived before package in some cases
 
     def receivePackage(self, package):
         if package.type == 'data':
+            self.sendPackage('ack', package.id)
             self.updateProcessTime(package)
             self.addReceivedAcks(package)
             self.updatePackageQueue(package)
             self.showUpdatedQueue()
-            self.sendPackage('ack', package.id)
+
         elif package.type == 'ack':
+            print '\nReceiving ack of package: ', package.data
             self.updateAcks(package)
+
         else:
             print 'Error receiving message: invalid type of message'
 
@@ -71,27 +83,39 @@ class Process:
             self.time = package.time
 
     def addReceivedAcks(self, package):
-        receivedAcks = 0
-        for i in range(0, int(len(self.ackQueue))):
-            if self.ackQueue[i].data == package.id:
-                receivedAcks += 1
-                del self.ackQueue[i]
-        package.acks = receivedAcks
+        package.acks += sum(ack.data == package.id for ack in self.ackQueue)
+
+        remainingAcks = sum(ack.data == package.id for ack in self.ackQueue)
+        while remainingAcks > 0:
+            for i in range(0, int(len(self.ackQueue))):
+                if self.ackQueue[i].data == package.id:
+                    del self.ackQueue[i]
+                    break
+            remainingAcks = sum(ack.data == package.id for ack in self.ackQueue)
    
     def updatePackageQueue(self, package):
         self.packageQueue.append(package);
         self.packageQueue = sorted(self.packageQueue, key = Package.getTime)
 
     def showUpdatedQueue(self):
-        print 'THIS PROCESS RECEIVE A MESSAGE - HERE THE LASTED QUEUE:'
+        print '\n\n\nUPDATED QUEUE:'
         for i in range(0, int(len(self.packageQueue))):
             print '------------------------------------------'
             print 'Package Id:', self.packageQueue[i].id
             print 'Package Type:', self.packageQueue[i].type
             print 'Package Time:', self.packageQueue[i].time
             print 'Package Data:', self.packageQueue[i].data
+            print '------------------------------------------\n'      
+
+    def showAppQueue(self):
+        print '\n\n\nAPP PACKAGES:'
+        for i in range(0, int(len(self.appPackages))):
             print '------------------------------------------'
-            print '\n'
+            print 'Package Id:', self.appPackages[i].id
+            print 'Package Type:', self.appPackages[i].type
+            print 'Package Time:', self.appPackages[i].time
+            print 'Package Data:', self.appPackages[i].data
+            print '------------------------------------------\n'
 
     def updateAcks(self, package):
         findMessage = False
@@ -108,28 +132,28 @@ def processThread():
 
     while True:
         try:
-            data = raw_input("Type a little string to send and press \"enter\": ")
+            data = raw_input("At any time, type a little string to send and press \"enter\": ")
             process.sendPackage('data', data)
         except Exception as e:
             print 'Error to send package: ', e
 
 def receiveThread():
-
-    serverPort = int(sys.argv[1])
-    serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    try:
-        serverSocket.bind(('',serverPort))
-        serverSocket.listen(1)
-
-        connectionSocket, addr = serverSocket.accept()
+    while True:
+        serverPort = int(sys.argv[1])
+        serverSocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
         try:
-            data = connectionSocket.recv(1024)
-            package = pickle.loads(data)
-            process.receivePackage(package)
+            serverSocket.bind(('',serverPort))
+            serverSocket.listen(50)
+            while True:
+                connectionSocket, addr = serverSocket.accept()
+                try:
+                    data = connectionSocket.recv(1024)
+                    package = pickle.loads(data)
+                    process.receivePackage(package)
+                except Exception as e:
+                    print 'Error to receive package:', e
         except Exception as e:
-            print 'Error to receive package:', e
-    except Exception as e:
-        print 'Error to open socket:', e
+            print 'Error to open socket:', e
 
 # Starting program
 global process 
