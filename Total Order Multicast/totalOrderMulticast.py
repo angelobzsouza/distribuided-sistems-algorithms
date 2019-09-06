@@ -1,6 +1,6 @@
 #coding: utf-8
 ########################################################
-# 		    	       	TOTAL ORDER MULTICAS            	 #
+# 		        	TOTAL ORDER MULTICAS               #
 # Nome: Angelo Bezerra de Souza RA: 726496             #
 # Nome: Giuliano Crespe RA: 743543                     #
 ########################################################
@@ -40,7 +40,6 @@ class Process:
                 self.showAppQueue()
 
     def sendPackage(self, type, data):
-        self.time += 1 
         packageId = str(self.time)+str(self.id)
         package = Package(packageId, type,  self.time, data)
 
@@ -58,16 +57,15 @@ class Process:
                 mySocket.close()
             except Exception as e:
                 print 'Error sending package to process: ', i,'Erro: ', e
-            if type == 'data':
-                time.sleep(random.randint(0, 5)) #Used to make acks arrived before package in some cases
+            time.sleep(2)
 
     def receivePackage(self, package):
+        self.updateProcessTime(package)
         if package.type == 'data':
-            self.sendPackage('ack', package.id)
-            self.updateProcessTime(package)
             self.addReceivedAcks(package)
             self.updatePackageQueue(package)
             self.showUpdatedQueue()
+            self.sendPackage('ack', package.id)
 
         elif package.type == 'ack':
             print '\nReceiving ack of package: ', package.data
@@ -80,7 +78,9 @@ class Process:
 
     def updateProcessTime(self, package):
         if self.time < package.time:
-            self.time = package.time
+            self.time = package.time + 1
+        else:
+            self.time += 1
 
     def addReceivedAcks(self, package):
         package.acks += sum(ack.data == package.id for ack in self.ackQueue)
