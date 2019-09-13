@@ -78,6 +78,11 @@ class Process:
             print 'Error to receive message: Type "', message.type,'" of message is invalid'
 
     def receiveResponseMessage(self, message):
+        if message.receiverId == self.id && message.response == 'OK':
+            self.permissionsToUseResouce[resouceNumber] += 1
+
+        if self.queueToUseResource[resourceNumber][0].senderId == self.id && self.permissionsToUseResouce[resourceNumber] == 3:
+            self.useResource(resourceNumber)
 
     def receiveRequestMessage(self, message):
         
