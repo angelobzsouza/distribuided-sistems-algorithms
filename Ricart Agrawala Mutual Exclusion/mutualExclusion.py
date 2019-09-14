@@ -12,22 +12,20 @@ import signal
 import pickle
 import time
 import random
+import threading
 
 class Message:
-    def __init__(self, resourceNumber, senderId, type, time, response):
-      self.resourceNumber = resourceNumber
+    def __init__(self, senderId, time, type, response):
       self.senderId = senderId
       self.type = type
       self.time = time
       self.response = response
-      self.receiverId = -1
 
     def getTime(self):
         return self.time
 
-    def send(self):
+    def sendRequestInBroadcast(self):
         for i in range (0, 3):
-            self.receiverId = i
             try:
                 # Open socket
                 mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,11 +37,10 @@ class Message:
                 mySocket.send(codeMessage)
                 mySocket.close()
             except Exception as e:
-                print 'Error sending message to process: ', i,'Erro: ', e
+                print 'Error sending request to process: ', i,'Erro: ', e
 
     def sendToQueue(self, queue):
         for i in range (0, int(len(queue))):
-            self.receiverId = queue[i].senderId
             try:
                 # Open socket
                 mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,10 +52,9 @@ class Message:
                 mySocket.send(codeMessage)
                 mySocket.close()
             except Exception as e:
-                print 'Error sending message to process: ', i,'Erro: ', e
+                print 'Error sending response to process: ', i,'Erro: ', e
 
     def sendResponse(self, receiverId):
-        self.receiverId = receiverId
         try:
             # Open socket
             mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -70,41 +66,40 @@ class Message:
             mySocket.send(codeMessage)
             mySocket.close()
         except Exception as e:
-            print 'Error sending message to process: ', i,'Erro: ', e
+            print 'Error sending response to process: ', i,'Erro: ', e
+
 class Process:
     def __init__(self, id):
         self.id = id
         self.time = id
-        self.resources = [False, False, False] #True while is used by resource, False while not
-        self.permissionsToUseResource = [0, 0, 0] #If permission n = 3, the process can use resource n
-        self.requestsToUseResources = [False, False, False]
-        self.queuesToUseResources = [[], [], []] #Queues to use each resource
+        self.usingResource = False
+        self.waitingToUseResource = False #True if waiting to use resource
+        self.permissionsToUseResource = 0
+        self.queueToUseResource = [] #Queue to use resource
 
-    def useResource(self, resourceNumber):
-        #del self.queuesToUseResources[resourceNumber][0]
-        self.resources[resourceNumber] = True
+    def useResource(self):
+        self.usingResource = True
         useTime = random.randint(5, 10)
         while useTime > 0:
-            print 'Using resource ', resourceNumber,'for more ', useTime,' seconds...'
+            print 'Using resource for more ', useTime,' seconds...'
             useTime -= 1
             time.sleep(1)
-        self.freeResource(resourceNumber)
+        self.freeResource()
 
-    def freeResource(self, resourceNumber):
-        self.resources[resourceNumber] = False
-        self.requestsToUseResources[resourceNumber] = False
-        message = Message(resourceNumber, self.id, 'response', self.time, 'OK')
-        message.sendToQueue(self.queuesToUseResources[resourceNumber])
+    def freeResource(self):
+        self.usingResource = False
+        self.waitingToUseResource = False
+        message = Message(self.id, self.time, 'response', 'OK')
+        message.sendToQueue(self.queueToUseResource)
     
-    def requestResource(self, resourceNumber):
-        print 'Requesting resource: ', resourceNumber
-        self.permissionsToUseResource[resourceNumber] = 0
-        message = Message(resourceNumber, self.id, 'request', self.time, 'NOT_IMPORTANT')
-        self.requestsToUseResources[resourceNumber] = message
-        message.send()
+    def requestResource(self):
+        print 'Requesting to use resource'
+        self.permissionsToUseResource = 0
+        message = Message(self.id, self.time, 'request', 'NOT_IMPORTANT')
+        self.waitingToUseResource = message
+        message.sendRequestInBroadcast()
 
     def receiveMessage (self, message):
-        #print 'receiving message from process:', message.senderId,' of type: ', message.type,' to resource:', message.resourceNumber,' with reponse: ',message.response
         self.updateProcessTime(message)
         if message.type == 'response':
             self.receiveResponseMessage(message)
@@ -114,28 +109,33 @@ class Process:
             print 'Error to receive message: Type "', message.type,'" of message is invalid'
 
     def receiveResponseMessage(self, message):
-        print 'receiving response: ', message.response,' from process: ', message.senderId,' to use resource: ', message.resourceNumber
+        print 'receiving response: ', message.response,' from process: ', message.senderId,' to use resource'
         if message.response == 'OK':
-            self.permissionsToUseResource[message.resourceNumber] += 1
-            if self.permissionsToUseResource[message.resourceNumber] == 2:
-                self.useResource(message.resourceNumber)
+            self.permissionsToUseResource += 1
+            if self.permissionsToUseResource == 2:
+                thread.start_new_thread(self.useResource, (self))
 
     def receiveRequestMessage(self, message):
         if message.senderId != self.id:
-            if self.resources[message.resourceNumber] == False and not self.requestsToUseResources[message.resourceNumber]:
-                responseMessage = Message(message.resourceNumber, self.id, 'response', self.time, 'OK')
+            print 'RECEBEU UMA REQUISICAO'
+            if not self.usingResource and self.waitingToUseResource == False:
+                print 'RESPONDEU SIM'
+                responseMessage = Message(self.id, self.time, 'response', 'OK')
                 responseMessage.sendResponse(message.senderId)
-            elif self.resources[message.resourceNumber] == True:
-                responseMessage = Message(message.resourceNumber, self.id, 'response', self.time, 'NO')
+            elif self.usingResource == True:
+                print 'RESPONDEU NAO'
+                responseMessage = Message(self.id, self.time, 'response', 'NO')
                 responseMessage.sendResponse(message.senderId)
-            elif self.resources[message.resourceNumber] == False and self.requestsToUseResources[message.resourceNumber]:
-                if message.time < self.requestsToUseResources[message.resourceNumber]:
-                    responseMessage = Message(message.resourceNumber, self.id, 'response', self.time, 'OK')
+            elif not self.usingResource and self.waitingToUseResource != False:
+                if message.time < self.waitingToUseResource.time:
+                    print 'RESPONDEU SIM'
+                    responseMessage = Message(self.id, self.time, 'response', 'OK')
                     responseMessage.sendResponse(message.senderId)
                 else:
-                    self.queuesToUseResources[message.resourceNumber].append(message)
-                    self.queuesToUseResources[message.resourceNumber] = sorted(self.queuesToUseResources[message.resourceNumber], key = Message.getTime)
-                    responseMessage = Message(message.resourceNumber, self.id, 'response', self.time, 'NO')
+                    self.queueToUseResource.append(message)
+                    self.queueToUseResource = sorted(self.queueToUseResource, key = Message.getTime)
+                    print 'RESPONDEU NAO'
+                    responseMessage = Message(self.id, self.time, 'response', 'NO')
                     responseMessage.sendResponse(message.senderId)
             else:
                 print 'Error to receive request: No valid action'
@@ -148,16 +148,14 @@ class Process:
 
 def processThread():
     print 'Starting process: ', sys.argv[2]
-
     while True:
         try:
-            time.sleep(random.randint(10, 20))
-            resourceNumber = random.randint(0, 2)
-            #Check if it's not using any resource
-            if not process.resources[resourceNumber] and process.requestsToUseResources[resourceNumber] == False:
-                    process.requestResource(resourceNumber)
+            time.sleep(random.randint(10, 15))
+            #Check if it's not using resource
+            if not process.usingResource and process.waitingToUseResource == False:
+                    process.requestResource()
         except Exception as e:
-            print 'Error requesting resource: ', resourceNumber,'Erro: ', e
+            print 'Error requesting resource: ', e
 
 def receiveThread():
     while True:
