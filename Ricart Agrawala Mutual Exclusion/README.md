@@ -22,4 +22,4 @@ python mutualExclusion.py 9001 1
 python mutualExclusion.py 9002 2
 ```
 
-3. The instances will decide alone when want to use one resource, print a message when this happen and when using one.
+3. The instances will decide alone when want to resource and prints messages to show what is happen in process.

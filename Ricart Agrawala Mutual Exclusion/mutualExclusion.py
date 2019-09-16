@@ -84,17 +84,17 @@ class Process:
             print 'Using resource for more ', useTime,' seconds...'
             useTime -= 1
             time.sleep(1)
-        self.freeResource()
 
     def freeResource(self):
         self.usingResource = False
         self.waitingToUseResource = False
+        self.permissionsToUseResource = 0
         message = Message(self.id, self.time, 'response', 'OK')
         message.sendToQueue(self.queueToUseResource)
+        self.queueToUseResource = []
     
     def requestResource(self):
         print 'Requesting to use resource'
-        self.permissionsToUseResource = 0
         message = Message(self.id, self.time, 'request', 'NOT_IMPORTANT')
         self.waitingToUseResource = message
         message.sendRequestInBroadcast()
@@ -113,28 +113,25 @@ class Process:
         if message.response == 'OK':
             self.permissionsToUseResource += 1
             if self.permissionsToUseResource == 2:
-                thread.start_new_thread(self.useResource, (self))
+                self.usingResource = True
 
     def receiveRequestMessage(self, message):
         if message.senderId != self.id:
-            print 'RECEBEU UMA REQUISICAO'
-            if not self.usingResource and self.waitingToUseResource == False:
-                print 'RESPONDEU SIM'
+            if not self.usingResource and not self.waitingToUseResource:
                 responseMessage = Message(self.id, self.time, 'response', 'OK')
                 responseMessage.sendResponse(message.senderId)
             elif self.usingResource == True:
-                print 'RESPONDEU NAO'
+                self.queueToUseResource.append(message)
+                self.queueToUseResource = sorted(self.queueToUseResource, key = Message.getTime)
                 responseMessage = Message(self.id, self.time, 'response', 'NO')
                 responseMessage.sendResponse(message.senderId)
-            elif not self.usingResource and self.waitingToUseResource != False:
+            elif not self.usingResource and self.waitingToUseResource:
                 if message.time < self.waitingToUseResource.time:
-                    print 'RESPONDEU SIM'
                     responseMessage = Message(self.id, self.time, 'response', 'OK')
                     responseMessage.sendResponse(message.senderId)
                 else:
                     self.queueToUseResource.append(message)
                     self.queueToUseResource = sorted(self.queueToUseResource, key = Message.getTime)
-                    print 'RESPONDEU NAO'
                     responseMessage = Message(self.id, self.time, 'response', 'NO')
                     responseMessage.sendResponse(message.senderId)
             else:
@@ -152,7 +149,7 @@ def processThread():
         try:
             time.sleep(random.randint(10, 15))
             #Check if it's not using resource
-            if not process.usingResource and process.waitingToUseResource == False:
+            if not process.usingResource and not process.waitingToUseResource:
                     process.requestResource()
         except Exception as e:
             print 'Error requesting resource: ', e
@@ -175,6 +172,12 @@ def receiveThread():
         except Exception as e:
             print 'Error to open socket:', e
 
+def useResourceThread():
+    while True:
+        if process.usingResource == True:
+            process.useResource()
+            process.freeResource()
+
 # Starting program
 global process 
 process = Process(int(sys.argv[2]))
@@ -182,6 +185,7 @@ process = Process(int(sys.argv[2]))
 def main():
     thread.start_new_thread(receiveThread, ())
     thread.start_new_thread(processThread, ())
+    thread.start_new_thread(useResourceThread, ())
     signal.pause()
 
 if __name__ == "__main__":
