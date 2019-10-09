@@ -1,0 +1,10 @@
+gnome-terminal -- python wireless-leader-election.py 9001 1;
+gnome-terminal -- python wireless-leader-election.py 9002 2;
+gnome-terminal -- python wireless-leader-election.py 9003 3;
+gnome-terminal -- python wireless-leader-election.py 9004 4;
+gnome-terminal -- python wireless-leader-election.py 9005 5;
+gnome-terminal -- python wireless-leader-election.py 9006 6;
+gnome-terminal -- python wireless-leader-election.py 9007 7;
+gnome-terminal -- python wireless-leader-election.py 9008 8;
+gnome-terminal -- python wireless-leader-election.py 9009 9;
+gnome-terminal -- python wireless-leader-election.py 9010 10;
