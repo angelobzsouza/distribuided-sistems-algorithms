@@ -1,6 +1,6 @@
 #coding: utf-8
 ########################################################
-# 		      	MUTUAL EXCLUSION RICART-AGRAWALA         #
+# 		      	BULLY ALGORITHM                        #
 # Nome: Angelo Bezerra de Souza RA: 726496             #
 # Nome: Giuliano Crespe RA: 743543                     #
 ########################################################
@@ -116,8 +116,11 @@ class Process:
         self.alive = False
 
     def reviveProcess(self):
-        self.alive = True
-        self.startElection()
+        if (not self.alive):
+            self.alive = True
+            self.startElection()
+        else:
+            print 'This process is already alive'
 
     def sendGeneralMessage(self):
         message = Message(self.id, self.time, 'general', False, 'I am a general message')
