@@ -42,7 +42,7 @@ class Message:
                         mySocket.send(codeMessage)
                         mySocket.close()
                     except Exception as e:
-                        print 'Error sending request to process: ', self.receiverId,'Erro: ', e
+                        print 'Error sending message to process: ', neighbors[i].pId,'Erro: ', e
     
     def sendToFather(self, fatherId):
         self.receiverId = fatherId
@@ -57,7 +57,7 @@ class Message:
             mySocket.send(codeMessage)
             mySocket.close()
         except Exception as e:
-            print 'Error sending request to process: ', self.receiverId,'Erro: ', e
+            print 'Error sending new leader message to process: ', self.receiverId,'Erro: ', e
 
 class Neighbor:
     def __init__(self, pId, capacity):
@@ -65,7 +65,7 @@ class Neighbor:
         self.capacity = capacity
 
 class Response:
-    def __init__(self, pId, responseType, response, capacity):
+    def __init__(self, pId, responseType, response, capacity, processWithBestCapacity):
         self.pId = pId
         self.responseType = responseType
         self.response = response
@@ -143,10 +143,10 @@ class Process:
         print 'Menu\n-------------------------------------'
         print '1 - Start Election'
         print '2 - Show leader PId'
-         print '3 - Show father PId'
-         print '4 - Show Election Id'
-         print '5 - Show Neighbors'
-         print '6 - Show Wait Vector'
+        print '3 - Show father PId'
+        print '4 - Show Election Id'
+        print '5 - Show Neighbors'
+        print '6 - Show Wait Vector'
         
         option = input()
         if (option == 1):
@@ -163,20 +163,20 @@ class Process:
             self.showWaitVector()
         else:
             print 'Invalid option...'
+    
+    def showFather(self):
+        print 'My father is ', self.fatherId
 
-     def showFather(self):
-         print 'My father is ', self.fatherId
+    def showElection(self):
+        print 'My election is ', self.electionId
 
-     def showElection(self):
-         print 'My election is ', self.electionId
-
-     def showNeighbors(self):
-         print 'My neighbors vector is:'
-         for i in range (0, int(len(self.neighbors))):
-             if (self.neighbors[i]):
-                 print i, ' - ID: ', self.neighbors[i].pId, ' CAP: ', self.neighbors[i].capacity
-             else:
-                 print i, ' ', self.neighbors[i]
+    def showNeighbors(self):
+        print 'My neighbors vector is:'
+        for i in range (0, int(len(self.neighbors))):
+            if (self.neighbors[i]):
+                print i, ' - ID: ', self.neighbors[i].pId, ' CAP: ', self.neighbors[i].capacity
+            else:
+                print i, ' ', self.neighbors[i]
 
     def showWaitVector(self):
         print 'My response wait vector is:'
@@ -188,8 +188,8 @@ class Process:
 
     def startElection(self):
         if (self.electionId == False):
-            print 'Starting new election...'
             self.electionId = self.id
+            self.initResponseWaitVector()
             electionMessage = Message(self.id, self.time, 'election', self.electionId, self.id, False, False)
             electionMessage.sendToNeighbors(self.neighbors, False, False)
         else:
@@ -203,7 +203,7 @@ class Process:
 
     def receiveMessage(self, message):
         if (message.receiverId == self.id and message.senderId != self.id):
-            print 'Receiving ', message.type,' message from process ', message.senderId
+            # print 'Receiving ', message.type,' message from process ', message.senderId
             self.updateProcessTime(message)
             if (message.type == 'election'):
                 self.receiveElectionMessage(message)
@@ -225,13 +225,9 @@ class Process:
     def receiveElectionMessage(self, message):
         changedElection = self.setHighestIdElection(message.electionId)
         changedFather = self.setFatherIfDontHaveOne(message.senderId)
-
         # change and start an election are the same thing
         if (changedElection):
-            print 'My fahter now is: ', self.fatherId
-            print  'Foward election message'
             self.initResponseWaitVector()
-            self.showWaitVector()
             electionMessage = Message(self.id, self.time, 'election', message.electionId, message.electionSource, False, False)
             electionMessage.sendToNeighbors(self.neighbors, self.fatherId, False)
         else:
@@ -242,9 +238,9 @@ class Process:
         for i in range(0, int(len(self.neighbors))):
             if (self.neighbors[i]):
                 if (self.neighbors[i].pId != self.fatherId):
-                    self.responseWaitVector[i] = Response(self.neighbors[i].pId, False, False, False)
+                    self.responseWaitVector[i] = Response(self.neighbors[i].pId, False, False, False, False)
                 else:
-                    self.responseWaitVector[i] = Response(self.neighbors[i].pId, 'father', False, False)
+                    self.responseWaitVector[i] = Response(self.neighbors[i].pId, 'father', False, False, False)
 
     def setHighestIdElection(self, newElectoinId):
         if (not self.electionId or newElectoinId > self.electionId):
@@ -268,22 +264,19 @@ class Process:
                     self.responseWaitVector[i].responseType = message.type
                     self.responseWaitVector[i].response = True
                     self.responseWaitVector[i].capacity = message.capacity
+                    self.responseWaitVector[i].processWithBestCapacity = message.newLeaderId
             if (self.receiveAllResponses()):
                 self.electLeader(message)
 
     def receiveAck(self, message):
         if (message.electionId == self.electionId):
-            self.showWaitVector()
             for i in range(0, int(len(self.responseWaitVector))):
                 if (self.responseWaitVector[i] and self.responseWaitVector[i].pId == message.senderId):
                     self.responseWaitVector[i].responseType = message.type
                     self.responseWaitVector[i].response = True
                     self.responseWaitVector[i].capacity = False
-                    print  'Mudou o indice: ', i
             if (self.receiveAllResponses()):
-                print  'Todas as respostas recebidas'
                 self.electLeader(message)
-            print  'Verificou as respostas mas ta faltando'
             
     def receiveAllResponses(self):
         receiveAllResponses = True
@@ -295,18 +288,22 @@ class Process:
     def electLeader(self, message):
         [bestLeaderId, bestLeaderCapacity] = self.getBestLeader()
         if (message.electionSource == self.id):
+            self.leaderId = bestLeaderId
+            self.election = False
+            self.fatherId = False
             newLeaderMessage = Message(self.id, self.time, 'newLeader', self.electionId, self.id, bestLeaderId, False)
             newLeaderMessage.sendToNeighbors(self.neighbors, False, False)
         else:
             responseElectionMessage = Message(self.id, self.time, 'electionResponse', self.electionId, message.electionSource, bestLeaderId, bestLeaderCapacity)
-            responseElectionMessage.sendToFather(self.fatherId)
+            if (self.fatherId):
+                responseElectionMessage.sendToFather(self.fatherId)
 
     def getBestLeader(self):
         bestLeader = self.id
         bestCapacity = self.capacity
         for i in range(0, int(len(self.responseWaitVector))):
             if (self.responseWaitVector[i] and self.responseWaitVector[i].responseType != 'father' and self.responseWaitVector[i].capacity > bestCapacity):
-                bestLeader = self.responseWaitVector[i].pId
+                bestLeader = self.responseWaitVector[i].processWithBestCapacity
                 bestCapacity = self.responseWaitVector[i].capacity
         return [bestLeader, bestCapacity]
 
