@@ -24,6 +24,7 @@ class Message:
         self.capacity = capacity
 
     def sendToNeighbors(self, neighbors, fatherId, receiverId = False):
+        time.sleep(1)
         for i in range (0, int(len(neighbors))):
             if (neighbors[i]):
                 if neighbors[i].pId != fatherId:
@@ -227,6 +228,7 @@ class Process:
         changedFather = self.setFatherIfDontHaveOne(message.senderId)
         # change and start an election are the same thing
         if (changedElection):
+            print 'Entering ou changing in election of id: ', changedElection
             self.initResponseWaitVector()
             electionMessage = Message(self.id, self.time, 'election', message.electionId, message.electionSource, False, False)
             electionMessage.sendToNeighbors(self.neighbors, self.fatherId, False)
@@ -294,6 +296,7 @@ class Process:
             newLeaderMessage = Message(self.id, self.time, 'newLeader', self.electionId, self.id, bestLeaderId, False)
             newLeaderMessage.sendToNeighbors(self.neighbors, False, False)
         else:
+            print 'Responding that process: ', bestLeaderId, ' has the capacity: ', bestLeaderCapacity, ' and are the best leader'
             responseElectionMessage = Message(self.id, self.time, 'electionResponse', self.electionId, message.electionSource, bestLeaderId, bestLeaderCapacity)
             if (self.fatherId):
                 responseElectionMessage.sendToFather(self.fatherId)

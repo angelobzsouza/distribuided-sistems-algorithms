@@ -12,7 +12,7 @@ Obs: It's necessary to use linux to execture the start script, if you are using 
 
 1. Clone this reposioty and in the root folder execute the following command
 ```
-chmod -x wireless-leader-election.sh
+chmod 777 wireless-leader-election.sh
 ```
 
 this command give permission to script file execute command in yout computer
