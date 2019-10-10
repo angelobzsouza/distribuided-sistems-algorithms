@@ -60,6 +60,21 @@ class Message:
         except Exception as e:
             print 'Error sending new leader message to process: ', self.receiverId,'Erro: ', e
 
+    def sendLeaderMessage(self, receiverId):
+        self.receiverId = receiverId
+        try:
+            # Open socket
+            mySocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            serverAddress = ('localhost', 9000 + self.receiverId)
+            mySocket.connect(serverAddress)
+
+            # Send message
+            codeMessage = pickle.dumps(self)
+            mySocket.send(codeMessage)
+            mySocket.close()
+        except Exception as e:
+            print 'Error sending new leader message to process: ', self.receiverId,'Erro: ', e
+
 class Neighbor:
     def __init__(self, pId, capacity):
         self.pId = pId
@@ -204,7 +219,6 @@ class Process:
 
     def receiveMessage(self, message):
         if (message.receiverId == self.id and message.senderId != self.id):
-            # print 'Receiving ', message.type,' message from process ', message.senderId
             self.updateProcessTime(message)
             if (message.type == 'election'):
                 self.receiveElectionMessage(message)
@@ -290,7 +304,7 @@ class Process:
     def electLeader(self, message):
         [bestLeaderId, bestLeaderCapacity] = self.getBestLeader()
         if (message.electionSource == self.id):
-            print 'I received the new leader'
+            print 'I received a new leader'
             self.leaderId = bestLeaderId
             self.electionId = False
             self.fatherId = False
@@ -312,11 +326,15 @@ class Process:
         return [bestLeader, bestCapacity]
 
     def receiveNewLeaderMessage(self, message):
-        print 'I received the new leader'
+        print 'I received a new leader'
         self.leaderId = message.newLeaderId
         self.electionId = False
         self.fatherId = False
-        message.sendToNeighbors(self.neighbors, False, False)
+        for i in range(0, int(len(self.responseWaitVector))):
+            if (self.responseWaitVector[i] and self.responseWaitVector[i].responseType == 'electionResponse'):
+                message.sendLeaderMessage(self.responseWaitVector[i].pId)
+        # message.senderId = self.id
+        # message.time = self.time
 
 def processThread():
     print 'Starting process: ', sys.argv[2]
