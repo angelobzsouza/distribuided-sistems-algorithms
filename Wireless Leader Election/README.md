@@ -1,8 +1,6 @@
 # Bully Algorithm (Leader Election)
 
-This code simulate the bully algorithm to elect a new leader in the distributed system. Every time a process receive a election message, it send messages to all process next to it. If dosn't receive any answer, send message to all indicating that it's the new leader. Every time a process know that some other process is dead, it's start a new election.
-
-There is a simple menu to help to understand the algorithm operation.
+This code simulate the an algorithm to elect a leader in a wireless network. To make easier to understand and implement, was created a network topology with ten different process. There is an simple menu to help you see what's happening in some moments of algorithm execution.
 
 ## Topology
 ![Topology](network_topology.png)
@@ -10,23 +8,17 @@ There is a simple menu to help to understand the algorithm operation.
 The blue circles are process and yellow notes its capacity
 
 ## Running
-1. Open five different terminals
-2. Run the application in each one with the following commands
+Obs: It's necessary to use linux to execture the start script, if you are using other operation sistem you can execute manualy follow this repository other implementations pattern, starting at process id 1 and finish at port 9010 and process id 10 
 
+1. Clone this reposioty and in the root folder execute the following command
 ```
-python bullyAlgorithm.py 9000 0
-```
-```
-python bullyAlgorithm.py 9001 1
-```
-```
-python bullyAlgorithm.py 9002 2
-```
-```
-python bullyAlgorithm.py 9003 3
-```
-```
-python bullyAlgorithm.py 9004 4
+chmod -x wireless-leader-election.sh
 ```
 
-3. The instances will decide alone when want to resource and prints messages to show what is happen in process.
+this command give permission to script file execute command in yout computer
+
+2. Run the script to open terminals and run applications simultaneously
+
+```
+./wireless-leader-election.sh
+```
