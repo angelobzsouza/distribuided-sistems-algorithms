@@ -147,7 +147,7 @@ class Process:
         print '3 - Show father PId'
         print '4 - Show Election Id'
         print '5 - Show Neighbors'
-        print '6 - Show Wait Vector'
+        print '6 - Show Wait Vector in Most Recent Election'
         
         option = input()
         if (option == 1):
@@ -290,8 +290,9 @@ class Process:
     def electLeader(self, message):
         [bestLeaderId, bestLeaderCapacity] = self.getBestLeader()
         if (message.electionSource == self.id):
+            print 'I received the new leader'
             self.leaderId = bestLeaderId
-            self.election = False
+            self.electionId = False
             self.fatherId = False
             newLeaderMessage = Message(self.id, self.time, 'newLeader', self.electionId, self.id, bestLeaderId, False)
             newLeaderMessage.sendToNeighbors(self.neighbors, False, False)
@@ -311,8 +312,9 @@ class Process:
         return [bestLeader, bestCapacity]
 
     def receiveNewLeaderMessage(self, message):
+        print 'I received the new leader'
         self.leaderId = message.newLeaderId
-        self.election = False
+        self.electionId = False
         self.fatherId = False
         message.sendToNeighbors(self.neighbors, False, False)
 
