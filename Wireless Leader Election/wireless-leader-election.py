@@ -1,7 +1,7 @@
 
 #coding: utf-8
 ########################################################
-# 		      	WIRELES LEADER ELECTION                  #
+# 		      	WIRELES LEADER ELECTION                #
 # Nome: Angelo Bezerra de Souza RA: 726496             #
 # Nome: Giuliano Crespe RA: 743543                     #
 ########################################################
@@ -143,48 +143,40 @@ class Process:
         print 'Menu\n-------------------------------------'
         print '1 - Start Election'
         print '2 - Show leader PId'
-        # print '3 - Show father PId'
-        # print '4 - Show Election Id'
-        # print '5 - Show Neighbors'
-        # print '6 - Show Wait Vector'
-        # print '7 - Keep Going'
+         print '3 - Show father PId'
+         print '4 - Show Election Id'
+         print '5 - Show Neighbors'
+         print '6 - Show Wait Vector'
         
         option = input()
         if (option == 1):
             self.startElection()
         elif (option == 2):
-            self.showLeader()
-        #     self.menu()            
-        # elif (option == 3):
-        #     self.showFather()
-        #     self.menu()
-        # elif (option == 4):
-        #     self.showElection()
-        #     self.menu()
-        # elif (option == 5):
-        #     self.showNeighbors()
-        #     self.menu()
-        # elif (option == 6):
-        #     self.showWaitVector()
-        #     self.menu()
-        # elif (option == 7):
-        #     return True
+            self.showLeader()            
+        elif (option == 3):
+            self.showFather()
+        elif (option == 4):
+            self.showElection()
+        elif (option == 5):
+            self.showNeighbors()
+        elif (option == 6):
+            self.showWaitVector()
         else:
             print 'Invalid option...'
 
-    # def showFather(self):
-    #     print 'My father is ', self.fatherId
+     def showFather(self):
+         print 'My father is ', self.fatherId
 
-    # def showElection(self):
-    #     print 'My election is ', self.electionId
+     def showElection(self):
+         print 'My election is ', self.electionId
 
-    # def showNeighbors(self):
-    #     print 'My neighbors vector is:'
-    #     for i in range (0, int(len(self.neighbors))):
-    #         if (self.neighbors[i]):
-    #             print i, ' - ID: ', self.neighbors[i].pId, ' CAP: ', self.neighbors[i].capacity
-    #         else:
-    #             print i, ' ', self.neighbors[i]
+     def showNeighbors(self):
+         print 'My neighbors vector is:'
+         for i in range (0, int(len(self.neighbors))):
+             if (self.neighbors[i]):
+                 print i, ' - ID: ', self.neighbors[i].pId, ' CAP: ', self.neighbors[i].capacity
+             else:
+                 print i, ' ', self.neighbors[i]
 
     def showWaitVector(self):
         print 'My response wait vector is:'
@@ -317,6 +309,12 @@ class Process:
                 bestLeader = self.responseWaitVector[i].pId
                 bestCapacity = self.responseWaitVector[i].capacity
         return [bestLeader, bestCapacity]
+
+    def receiveNewLeaderMessage(self, message):
+        self.leaderId = message.newLeaderId
+        self.election = False
+        self.fatherId = False
+        message.sendToNeighbors(self.neighbors, False, False)
 
 def processThread():
     print 'Starting process: ', sys.argv[2]
