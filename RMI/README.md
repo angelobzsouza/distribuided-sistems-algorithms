@@ -18,13 +18,13 @@ make
 
 4. Run the following command to start the server
 ```
-java Server
+java Server <server_ip>
 ```
 
 4. Run the following command to start the client
 
 ```
-java Client
+java Client <server_ip>
 ```
 
 5. Chosse an option to upload file e see how much time it takes
