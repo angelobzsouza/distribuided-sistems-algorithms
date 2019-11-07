@@ -11,20 +11,25 @@ This is a Java RMI implementation. The method accessed is a upload method. You c
 ```
 make create-files
 ```
-4. Run the following command in both sides to compile the program
+
+4. Run the following command in server side to create upload foler
+```
+make create-folder
+```
+5. Run the following command in both sides to compile the program
 ```
 make
 ```
 
-4. Run the following command to start the server
+6. Run the following command to start the server
 ```
 java Server <server_ip>
 ```
 
-4. Run the following command to start the client
+7. Run the following command to start the client
 
 ```
 java Client <server_ip>
 ```
 
-5. Chosse an option to upload file e see how much time it takes
+8. Chosse an option to upload file e see how much time it takes
